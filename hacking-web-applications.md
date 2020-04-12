@@ -262,4 +262,102 @@ How to prevent this:
 
 ### Distributed denial of service (DDoS)
 
-Many different attackers targeting the same service.
+Many different attackers targeting the same service. They are extremely difficult to defend against.
+
+Sometimes these attacks are 'crowd sourced'. Someone declares a target (e.g. on twitter) and others will attack that target (e.g. by using [LOIC](https://en.wikipedia.org/wiki/Low_Orbit_Ion_Cannon)).
+
+DDoS as a service is a thing. They are marketed as network stress testing tools, but they are usually created for malicious users.
+
+Features at risk of a DDoS:
+
+- Login, registration or change password facilities where a slow hashing algorithm is used
+- Any process that directly send email via SMTP (e.g. password reset)
+- Resources that connect to the database (potential connection pool DDoS)
+- Other high-load features, e.g. running reports or searching large data sets
+
+Other DDoS attacks:
+
+- Amplification attacks; requesting more resources
+- DNS reflection attack; make DNS queries, but forge the request IP, so the response goes back ot the target server. The attacker can make queries against many different DNS servers to amplify the attack
+- NTP attack; Network Time Protocol, another reflection attack using time servers
+- SNMP attack; Simple Network Management Protocol
+- SYN packet flood attack; targeting the TCP layer
+
+### Defending against DDoS
+
+- Dedicated infrastructure perimeter defences
+- DDoS mitigation as a service (e.g. CDN)
+- Blocking incoming sources via IP (although it's difficult if this is a DDoS)
+- "Beat it with bandwidth"; having high bandwidth threshold to just handle the requests
+- Be cautious that it isn't a diversion technique. DDoS could distract you while the attacker is trying to exploit other parts of the system
+
+## Other attacks on the server
+
+There are many different attack vectors on web applications, and risks are often chained together.
+
+### Improper error handling
+
+Security misconfiguration; leaking internal error messages/exceptions can be used to expose sensitive information. You can see the stacktrace and also some information about the framework/serb server used.
+
+If the stack trace shows SQL errors, you can try to attempt SQL injection.
+
+On `hackyourselffirst`:
+
+`select top 1 password*1 from userprofile)`
+
+`password*1` is trying to multiply `nvarchar` with an `int`, ASP.NET shows the value of the `nvarchar` in the 'conversion failed' error.
+
+### Understanding salted hashes
+
+Storing salted hashes is often done incorrectly. This is how many people store passwords and log in the users:
+
+1. User registers to the site, they give plaintext password
+1. The app generates a set of random bytes (salt)
+1. The app takes the password and the salt, and hashes both of them together
+1. Stores in the database
+
+The salt is unique; it makes cracking the hashes more difficult. Even if users use the same password, the salt will make the hashed value unique.
+
+Rainbow tables used to show pre-computed hashes, but this isn't possible with salt (due to how unique the hashed value is).
+
+When user logs in:
+
+1. User provides username and password in plain text
+1. Web application takes the user and queries database, returns salt and the salted hash of the password
+1. Web app then uses the user's plain text password and the salt, and hashes them, and then compares this values to the salted hash of the password retrieved from the database.
+
+HOWEVER, if the database is hacked and the salt and hashed values are leaked, these can be recreated using cracking software.
+
+[Hashcat](https://hashcat.net/hashcat/) is a password cracker that can go through salts and salted hashes and easily crack them. It uses a password dictionary to help the process go quicker.
+
+### How to properly store passwords
+
+Check out [OWASP password storage cheatsheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)!
+
+The best hashes are the slowest. 'Work factor' is used to describe the process of hashing/decrypting passwords.
+
+### Unvalidated redirects and forwards
+
+Using things like `returnUrl` query string in your app is dangerous. Exploiters can put malicious values in the query string. They can even put links to files in there! Your users will trust your domain name and fall for the attack.
+
+Your app should validate the URL. Make sure it only redirects to internal URLs, or white listed external URLs.
+
+### Exposed exceptions logs with ELMAH
+
+A lot of old ASP apps use ELMAH to log exceptions. This is exposed by default in `/elmah`. You can see  the exceptions in details as well as info about the system, requests, cookies, etc.
+
+You can use a google dork to find these:
+
+`inurl:elmah.axd filetype:axd "error log for"`
+
+### Vulnerabilities in web services
+
+Connected devices rely on connected services, e.g. IoT, phones, tablets, cars. These devices are vulnerable to attacks which can make the web server vulnerable.
+
+- URLs/APi
+- Exploiting JSON/XML
+- Bearer tokens/auth headers
+
+These devices are not as mature as web browsers. As a user, you cannot see if the app is connecting over HTTPS.
+
+You can reverse engineer the software and expose URLs/API and tamper with these.

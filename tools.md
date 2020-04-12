@@ -35,6 +35,7 @@
 - Cain and Abel
 - TcpDump
 - Wireshark
+- [Hashcat](https://hashcat.net/hashcat/) for crashing salted hashes
 
 ## Network defence wireless tools
 
